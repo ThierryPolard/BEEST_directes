@@ -37,26 +37,48 @@ fortune(15)
 setwd("C:/Users/XZ4062/Desktop/LyRE/BEEST/Tâches LyRE/P_1 - Synthèse analyse et études/données/Données Seramm")
 getwd()
 
-## lecture du fichier excel( packages openxlsx)
-data_ET<- read.xlsx("ET.xlsx", sheet = 1, startRow = 1, colNames = TRUE,
-          rowNames = FALSE, detectDates = TRUE, skipEmptyRows = FALSE,
-          rows = NULL, cols = NULL, check.names = FALSE, namedRegion = NULL)
+## lecture du fichier excel(packages openxlsx)
+## Eau traitée
+data_ET<- read.xlsx("ET.xlsx", sheet = 1, startRow = 1, colNames = TRUE, 
+            rowNames = FALSE, detectDates = TRUE, skipEmptyRows = FALSE,
+            rows = NULL, cols = NULL, check.names = FALSE, namedRegion = NULL)
 
-## modifications des noms de colonnes
-colnames(data_ET)<-gsub("/l","l-1",colnames(data_ET))
-colnames(data_ET)<-gsub("/j","j-1",colnames(data_ET))
+## Réseau sanitaire  (= eaux usées)
+data_RS<- read.xlsx("RS.xlsx", sheet = 1, startRow = 1, colNames = TRUE, 
+            rowNames = FALSE, detectDates = TRUE, skipEmptyRows = FALSE,
+            rows = NULL, cols = NULL, check.names = FALSE, namedRegion = NULL)
+## Réseau unitaire
+data_RU<- read.xlsx("RU.xlsx", sheet = 1, startRow = 1, colNames = TRUE,
+            rowNames = FALSE, detectDates = TRUE, skipEmptyRows = FALSE,
+            rows = NULL, cols = NULL, check.names = FALSE, namedRegion = NULL)
 
+## Liste des sources 
+sources <- c("ET", "RS", "RU")
+
+## modifications des noms de colonnes (de /j et /l en j-1 et l-1 pour moins de confusion)
+n <- length (sources) 
+
+for (i in 1:n){
+    eval(parse(text=paste0("colnames(data_",sources[i],")<-gsub(\"/l\",\"l-1\",colnames(data_",sources[i],"))"))) 
+    eval(parse(text=paste0("colnames(data_",sources[i],")<-gsub(\"/j\",\"j-1\",colnames(data_",sources[i],"))")))  
+}
 
 #attribution de la bonne classe à chaque donnée
- #verification des classes initiales
+
+## exemple pour ET
+
+#verification des classes initiales
 explo_class <- c( )
-for (i in 1:ncol(data_ET))
+
+n <-ncol(data_ET)
+
+for (i in 1:n)
 explo_class[i] <- class(data_ET[,i])
 
 table_explo_class <- cbind(colnames(data_ET), explo_class)
 table_explo_class
 
- # modification ponctuelle des classe dates et character
+# modification ponctuelle des classe dates et character
 data_ET$Date <- as.Date(data_ET$Date)
 data_ET$Mois.Année <- as.Date(data_ET$Mois.Année)
 data_ET$Meteo <- as.character(data_ET$Meteo)
@@ -87,6 +109,30 @@ for (i in 1:ncol(data_ET))
 table_explo_class <- cbind(colnames(data_ET), explo_class)
 table_explo_class
 
+######## solution automatisée pour les autres------
+
+# modification ponctuelle des classe dates et character
+n <- length (sources) 
+
+for (i in 1:n){
+  eval(parse(text=paste0("data_",sources[i],"$Date <- as.Date(data_",sources[i],"$Date)")))
+  eval(parse(text=paste0("data_",sources[i],"$Mois.Année <- as.Date(data_",sources[i],"$Mois.Année)")))
+  eval(parse(text=paste0("data_",sources[i],"$Meteo <- as.character(data_",sources[i],"$Meteo)")))
+}
+
+# pour les colonnes classées a tort en character (a cause des virgule)  
+  # remplacement des virgules par des points et modification du format
+m <- length (sources) 
+n <- ncol(data_ET)
+
+for (i in 1:m)
+for ( j in 4:n) { 
+  eval(parse(text=paste0("data_",sources[i],"[,",j,"]<-gsub(\",\",\".\",data_",sources[i],"[,",j,"])")))
+  eval(parse(text=paste0("data_",sources[i],"[,",j,"] <- as.numeric(data_",sources[i],"[,",j,"])")))
+}
+
+
+
 ## première représentation graphique -----------------
 
 
@@ -94,17 +140,16 @@ table_explo_class
 #The palette with grey:
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-# fonction de création des graphs basique
+# fonction de création des graphs basique                                                                    ----------------
 # avec un plot de base
-graph<- function (A, B){
+graph <- function (A, B){
   plot (A,B)
 }
 
 graph( data_ET$Date,data_ET[,15])
+# ---------- 
 
-# avec ggplot
-
-# Définition de la fonction de construction des graphs
+# avec ggplot : Définition de la fonction de construction des graphs avancés                                 -----
 graph0 <- function (A,B,C){
   df<-A
   df$xVar <- df[,grep(B,names(df))]
@@ -114,13 +159,84 @@ graph0 <- function (A,B,C){
     theme_bw()
   return(G_x)
 }
+#-----------
+
 
 
 # construction des graphs
 
-G_pH       <- graph0(data_ET, "Date", "pH")
+#pH
+param <- "pH"
+n <-length(sources)
+for (i in 1:n) {
+  eval(parse(text=paste0("G_",param,"_",sources[i],"<- graph0(data_",sources[i],", \"Date\", \"",param,"\")+ 
+                                scale_x_date (name=\"\") +
+                                scale_y_continuous (name=\"",param,"\")+
+                                ggtitle(\"",sources[i],"\")")))           
+}
+
+
+## affichage des graphs
+## version manuelle                                                                                          ---------------
+##x11()
+##plot_grid(G_pH_ET, G_pH_RS,G_pH_RU, labels = c("ET", "RS", "RU"), nrow=3, align = "v")
+## version automatisée-------------
+n <-length(sources)
+liste_temp <- paste0("G_",param,"_",paste0(sources))
+liste_graph <-paste(liste_temp,collapse=",")
+
+X11()
+eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
+
+
+##################tentative d'automatisation poussée
+
+
+graph1<- function(n, param, sources){
+  n <- length (sources) 
+  param <- param
+  sources <- sources
+  for (i in 1:n) {
+    eval(parse(text=paste0("G_",param,"_",sources[i],"<- graph0(data_",sources[i],", \"Date\", \"",param,"\")+ 
+                           scale_x_date (name=\"\") +
+                           scale_y_continuous (name=\"",param,"\")+
+                           ggtitle(\"",sources[i],"\")"))) 
+    eval(parse(text=paste0("return(G_",param,"_",sources[i],")")))
+  }
+}
+
+
+G_pH <- graph1(n, "pH", sources)
+
+
+G_MES_kg_j <- graph0(data_ET, "Date", "MEST.kgj-1")
+
+n <- length (sources) 
+####################
+
+
+
+
+
+
+
+#pH
+param <- "MEST.mgl-1"
+
+n <- length (sources) 
+
+for (i in 1:n) {
+  eval(parse(text=paste0("G_",param,"_",sources[i],"<- graph0(data_",sources[i],", \"Date\", \"",param,"\")+ 
+                         scale_x_date (name=\"\") +
+                         scale_y_continuous (name=\"",param,"\")+
+                         ggtitle(\"",sources[i],"\")")))           
+}
 
 G_MES_mg_l <- graph0(data_ET, "Date", "MEST.mgl-1")
+
+
+
+
 G_MES_kg_j <- graph0(data_ET, "Date", "MEST.kgj-1")
 
 G_DCO.nd.mg_l <- graph0(data_ET, "Date", "DCO.nd.mgl-1")
