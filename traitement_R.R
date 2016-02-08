@@ -140,16 +140,17 @@ for ( j in 4:n) {
 #The palette with grey:
 cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
-# fonction de création des graphs basique                                                                    ----------------
-# avec un plot de base
+# fonction de création des graph
+
+# fonction 'graph'  - un plot de base
 graph <- function (A, B){
   plot (A,B)
 }
 
-graph( data_ET$Date,data_ET[,15])
-# ---------- 
+## EXEMPLE : 
+# graph( data_ET$Date,data_ET[,15])
 
-# avec ggplot : Définition de la fonction de construction des graphs avancés                                 -----
+# fonction graph0 - avec ggplot              
 graph0 <- function (A,B,C){
   df<-A
   df$xVar <- df[,grep(B,names(df))]
@@ -159,9 +160,45 @@ graph0 <- function (A,B,C){
     theme_bw()
   return(G_x)
 }
-#-----------
 
 
+# fonction GRAPH 6 construction d'autant de graphs que de sources 
+GRAPH <- function(param, sources){    
+  n <- length(sources)
+  for (i in 1:n) {
+    eval(parse(text=paste0("data <- graph0(data_",sources[i],", \"Date\", \"",param,"\")+
+                           scale_x_date (name=\"\") +
+                           scale_y_continuous (name=\"",param,"\")+
+                           ggtitle(\"",sources[i],"\")")))
+    print("ok") 
+    assign(paste("G",param,sources[i],sep="_"),data,.GlobalEnv)
+  } 
+}
+
+# EXEMPLE
+# GRAPH ("MEST_flux", sources)
+
+## affichage automatisé des graphs
+
+mergePlot <- function (param,sources){
+  GRAPH (param, sources)
+  n<-length(sources)
+  liste_temp <- paste0("G_",param,"_",paste0(sources))
+  liste_graph <-paste(liste_temp,collapse=",")
+  X11()
+  eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
+}
+
+##EXEMPLE
+mergePlot("MEST_conc", sources)
+
+mergePlot("DCO.nd_flux", sources)
+
+
+
+#######################################################################################
+###########################################################################################
+#############
 
 # construction des graphs
 
@@ -180,37 +217,57 @@ for (i in 1:n) {
 ## version manuelle                                                                                          ---------------
 ##x11()
 ##plot_grid(G_pH_ET, G_pH_RS,G_pH_RU, labels = c("ET", "RS", "RU"), nrow=3, align = "v")
-## version automatisée-------------
+## version automatisée                                                                                       ----------------
 n <-length(sources)
 liste_temp <- paste0("G_",param,"_",paste0(sources))
 liste_graph <-paste(liste_temp,collapse=",")
 
 X11()
 eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
-
+#--------------------
 #MES
 
 
-param <- "MEST_conc"
+###
+graph0 <- function (A,B,C){
+  df<-A
+  df$xVar <- df[,grep(B,names(df))]
+  df$yVar <- df[,grep(C,names(df))]
+  G_x<-ggplot(data =df, aes(x=xVar, y=yVar)  ) +
+    geom_point()  +
+    theme_bw()
+  return(G_x)
+}
+###
 
-# construction des graphs
-n <-length(sources)
-for (i in 1:n) {
-  eval(parse(text=paste0("G_",param,"_",sources[i],"<- graph0(data_",sources[i],", \"Date\", \"",param,"\")+ 
+GRAPH <- function(param, sources){    
+  n <- length(sources)
+  for (i in 1:n) {
+    eval(parse(text=paste0("data <- graph0(data_",sources[i],", \"Date\", \"",param,"\")+
                          scale_x_date (name=\"\") +
                          scale_y_continuous (name=\"",param,"\")+
-                         ggtitle(\"",sources[i],"\")")))           
+                         ggtitle(\"",sources[i],"\")")))
+   print("ok") 
+   assign(paste("G",param,sources[i],sep="_"),data,.GlobalEnv)
+  } 
 }
+                                                                                         
+GRAPH ("MEST_conc", sources)
+
 
 ## affichage automatisé des graphs
 
-liste_temp <- paste0("G_",param,"_",paste0(sources))
-liste_graph <-paste(liste_temp,collapse=",")
+mergePlot <- function (param,sources){
+  GRAPH (param, sources)
+  liste_temp <- paste0("G_",param,"_",paste0(sources))
+  liste_graph <-paste(liste_temp,collapse=",")
+  X11()
+  eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
+}
 
-X11()
-eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
+mergePlot("MEST_flux", sources)
 
-
+########
 
 
 G_MES_mg_l <- graph0(data_ET, "Date", "MEST.mgl-1")
