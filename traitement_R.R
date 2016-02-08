@@ -59,8 +59,8 @@ sources <- c("ET", "RS", "RU")
 n <- length (sources) 
 
 for (i in 1:n){
-    eval(parse(text=paste0("colnames(data_",sources[i],")<-gsub(\"/l\",\"l-1\",colnames(data_",sources[i],"))"))) 
-    eval(parse(text=paste0("colnames(data_",sources[i],")<-gsub(\"/j\",\"j-1\",colnames(data_",sources[i],"))")))  
+    eval(parse(text=paste0("colnames(data_",sources[i],")<-gsub(\".mg/l\",\"_conc\",colnames(data_",sources[i],"))"))) 
+    eval(parse(text=paste0("colnames(data_",sources[i],")<-gsub(\".kg/j\",\"_flux\",colnames(data_",sources[i],"))")))  
 }
 
 #attribution de la bonne classe à chaque donnée
@@ -188,43 +188,13 @@ liste_graph <-paste(liste_temp,collapse=",")
 X11()
 eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
 
-
-##################tentative d'automatisation poussée
-
-
-graph1<- function(n, param, sources){
-  n <- length (sources) 
-  param <- param
-  sources <- sources
-  for (i in 1:n) {
-    eval(parse(text=paste0("G_",param,"_",sources[i],"<- graph0(data_",sources[i],", \"Date\", \"",param,"\")+ 
-                           scale_x_date (name=\"\") +
-                           scale_y_continuous (name=\"",param,"\")+
-                           ggtitle(\"",sources[i],"\")"))) 
-    eval(parse(text=paste0("return(G_",param,"_",sources[i],")")))
-  }
-}
+#MES
 
 
-G_pH <- graph1(n, "pH", sources)
+param <- "MEST_conc"
 
-
-G_MES_kg_j <- graph0(data_ET, "Date", "MEST.kgj-1")
-
-n <- length (sources) 
-####################
-
-
-
-
-
-
-
-#pH
-param <- "MEST.mgl-1"
-
-n <- length (sources) 
-
+# construction des graphs
+n <-length(sources)
 for (i in 1:n) {
   eval(parse(text=paste0("G_",param,"_",sources[i],"<- graph0(data_",sources[i],", \"Date\", \"",param,"\")+ 
                          scale_x_date (name=\"\") +
@@ -232,11 +202,18 @@ for (i in 1:n) {
                          ggtitle(\"",sources[i],"\")")))           
 }
 
+## affichage automatisé des graphs
+
+liste_temp <- paste0("G_",param,"_",paste0(sources))
+liste_graph <-paste(liste_temp,collapse=",")
+
+X11()
+eval(parse(text=paste0("plot_grid(",liste_graph,", nrow=",n,", align = \"v\")")))
+
+
+
+
 G_MES_mg_l <- graph0(data_ET, "Date", "MEST.mgl-1")
-
-
-
-
 G_MES_kg_j <- graph0(data_ET, "Date", "MEST.kgj-1")
 
 G_DCO.nd.mg_l <- graph0(data_ET, "Date", "DCO.nd.mgl-1")
@@ -270,6 +247,9 @@ G_Chlorure<- graph0(data_ET, "Date", "Chlorure")
 
 
 ## affichage des graphs
+
+
+G_pH <- graph0(data_ET, "Date", "pH")
 G_pH
 
 plot_grid(G_MES_mg_l, G_MES_kg_j, labels = c("mg/l", "kg/j"), nrow=2, align = "v")
